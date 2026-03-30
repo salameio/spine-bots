@@ -1,0 +1,1935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spine Bots — AI Bot Idea Generator</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #0a0a0f;
+            --surface: #13131a;
+            --surface-2: #1a1a24;
+            --border: #2a2a3a;
+            --text: #e8e8f0;
+            --text-muted: #8888a0;
+            --accent: #6c5ce7;
+            --accent-light: #a29bfe;
+            --accent-glow: rgba(108, 92, 231, 0.3);
+            --success: #00cec9;
+            --success-glow: rgba(0, 206, 201, 0.3);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .bg-grid {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image:
+                linear-gradient(rgba(108, 92, 231, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(108, 92, 231, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none; z-index: 0;
+        }
+
+        .bg-glow {
+            position: fixed; width: 600px; height: 600px; border-radius: 50%;
+            filter: blur(150px); opacity: 0.15; pointer-events: none; z-index: 0;
+        }
+        .bg-glow-1 { top: -200px; right: -100px; background: var(--accent); }
+        .bg-glow-2 { bottom: -200px; left: -100px; background: var(--success); }
+
+        .app {
+            position: relative; z-index: 1; max-width: 720px;
+            margin: 0 auto; padding: 40px 24px; min-height: 100vh;
+            display: flex; flex-direction: column;
+        }
+
+        .header { text-align: center; margin-bottom: 48px; }
+
+        .logo {
+            display: inline-flex; align-items: center; gap: 12px; margin-bottom: 16px;
+        }
+        .logo-icon {
+            width: 48px; height: 48px;
+            background: linear-gradient(135deg, var(--accent), var(--success));
+            border-radius: 14px; display: flex; align-items: center;
+            justify-content: center; font-size: 24px;
+        }
+        .logo-text { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+        .logo-text span { color: var(--accent-light); }
+
+        .header p {
+            color: var(--text-muted); font-size: 16px; line-height: 1.6;
+            max-width: 500px; margin: 0 auto;
+        }
+
+        .progress-container { margin-bottom: 40px; }
+        .progress-info {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+        }
+        .progress-label { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+        .progress-count { font-size: 13px; color: var(--accent-light); font-weight: 600; }
+        .progress-bar {
+            height: 4px; background: var(--surface-2); border-radius: 4px; overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--success));
+            border-radius: 4px;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .question-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 20px; padding: 40px; margin-bottom: 24px;
+            animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .question-number {
+            font-size: 12px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 2px; color: var(--accent-light); margin-bottom: 12px;
+        }
+        .question-text {
+            font-size: 22px; font-weight: 600; line-height: 1.4;
+            margin-bottom: 8px; letter-spacing: -0.3px;
+        }
+        .question-subtitle {
+            font-size: 14px; color: var(--text-muted); margin-bottom: 28px; line-height: 1.5;
+        }
+
+        .options { display: flex; flex-direction: column; gap: 10px; }
+
+        .option {
+            display: flex; align-items: center; gap: 14px; padding: 16px 20px;
+            background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 14px; cursor: pointer; transition: all 0.2s ease;
+            font-size: 15px; font-weight: 500; color: var(--text);
+            text-align: left; width: 100%; font-family: inherit;
+        }
+        .option:hover {
+            border-color: var(--accent); background: rgba(108, 92, 231, 0.08);
+            transform: translateX(4px);
+        }
+        .option-letter {
+            width: 32px; height: 32px; min-width: 32px; border-radius: 9px;
+            background: rgba(108, 92, 231, 0.15); color: var(--accent-light);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; font-weight: 700;
+        }
+        .option:hover .option-letter { background: var(--accent); color: white; }
+
+        /* Custom input */
+        .custom-input-wrapper {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+        .custom-input-label {
+            font-size: 13px; color: var(--text-muted); font-weight: 500;
+            margin-bottom: 10px; display: block;
+        }
+        .custom-input-row {
+            display: flex; gap: 10px;
+        }
+        .custom-input {
+            flex: 1; padding: 14px 18px; background: var(--surface-2);
+            border: 1px solid var(--border); border-radius: 12px;
+            color: var(--text); font-size: 14px; font-family: inherit;
+            outline: none; transition: border-color 0.2s;
+        }
+        .custom-input::placeholder { color: var(--text-muted); opacity: 0.6; }
+        .custom-input:focus { border-color: var(--accent); }
+        .custom-submit {
+            padding: 14px 20px; background: linear-gradient(135deg, var(--accent), #5a4bd1);
+            border: none; border-radius: 12px; color: white; font-size: 14px;
+            font-weight: 600; cursor: pointer; font-family: inherit;
+            transition: all 0.2s; white-space: nowrap;
+        }
+        .custom-submit:hover { transform: translateY(-1px); box-shadow: 0 4px 16px var(--accent-glow); }
+        .custom-submit:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* Back button */
+        .back-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 10px 18px; background: var(--surface-2);
+            border: 1px solid var(--border); border-radius: 10px;
+            color: var(--text-muted); font-size: 13px; font-weight: 600;
+            cursor: pointer; font-family: inherit; transition: all 0.2s;
+            margin-bottom: 20px;
+        }
+        .back-btn:hover {
+            border-color: var(--accent); color: var(--text);
+            background: rgba(108, 92, 231, 0.08);
+        }
+
+        /* Summary */
+        .summary-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 20px; padding: 40px;
+            animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .summary-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: rgba(0, 206, 201, 0.1); border: 1px solid rgba(0, 206, 201, 0.2);
+            color: var(--success); padding: 6px 14px; border-radius: 100px;
+            font-size: 13px; font-weight: 600; margin-bottom: 20px;
+        }
+        .bot-name {
+            font-size: 28px; font-weight: 800; margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--accent-light), var(--success));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text; letter-spacing: -0.5px;
+        }
+        .bot-tagline {
+            font-size: 16px; color: var(--text-muted); margin-bottom: 28px; line-height: 1.5;
+        }
+        .summary-section { margin-bottom: 24px; }
+        .summary-section-title {
+            font-size: 12px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 2px; color: var(--accent-light); margin-bottom: 10px;
+        }
+        .summary-section p, .summary-section li {
+            font-size: 15px; line-height: 1.7; color: var(--text-muted);
+        }
+        .summary-section ul { list-style: none; padding: 0; }
+        .summary-section li {
+            padding: 6px 0; padding-left: 20px; position: relative;
+        }
+        .summary-section li::before {
+            content: '\2192'; position: absolute; left: 0; color: var(--accent-light);
+        }
+
+        .user-notes-section {
+            background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 14px; padding: 20px; margin-bottom: 24px;
+        }
+        .user-notes-section .summary-section-title { margin-bottom: 12px; }
+        .user-note-item {
+            padding: 8px 0; font-size: 14px; color: var(--text-muted);
+            border-bottom: 1px solid rgba(42,42,58,0.5); line-height: 1.5;
+        }
+        .user-note-item:last-child { border-bottom: none; }
+        .user-note-item strong { color: var(--accent-light); font-weight: 600; }
+
+        .actions { display: flex; gap: 12px; margin-top: 32px; flex-wrap: wrap; }
+        .btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 14px 24px; border-radius: 12px; font-size: 14px;
+            font-weight: 600; cursor: pointer; transition: all 0.2s;
+            font-family: inherit; border: none;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #5a4bd1);
+            color: white; box-shadow: 0 4px 20px var(--accent-glow);
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 30px var(--accent-glow); }
+        .btn-secondary {
+            background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { border-color: var(--accent); background: rgba(108, 92, 231, 0.08); }
+
+        .answer-trail { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+        .trail-chip {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px 12px; background: var(--surface-2);
+            border: 1px solid var(--border); border-radius: 100px;
+            font-size: 12px; color: var(--text-muted); font-weight: 500;
+        }
+        .trail-chip .trail-label { color: var(--accent-light); font-weight: 600; }
+
+        .welcome { text-align: center; padding: 60px 20px; }
+        .welcome h1 {
+            font-size: 40px; font-weight: 800; letter-spacing: -1px;
+            margin-bottom: 16px; line-height: 1.2;
+        }
+        .welcome h1 span {
+            background: linear-gradient(135deg, var(--accent-light), var(--success));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .welcome p {
+            color: var(--text-muted); font-size: 17px; line-height: 1.7;
+            max-width: 480px; margin: 0 auto 40px;
+        }
+        .team-select {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+            max-width: 500px; margin: 0 auto;
+        }
+        .team-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 20px; padding: 32px 24px; cursor: pointer;
+            transition: all 0.3s ease; text-align: center;
+        }
+        .team-card:hover {
+            border-color: var(--accent); transform: translateY(-4px);
+            box-shadow: 0 8px 40px var(--accent-glow);
+        }
+        .team-icon { font-size: 40px; margin-bottom: 16px; }
+        .team-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+        .team-card p { font-size: 13px; color: var(--text-muted); line-height: 1.4; margin: 0; }
+
+        .thinking {
+            text-align: center; padding: 60px 20px; animation: slideUp 0.4s ease;
+        }
+        .thinking-dots {
+            display: flex; gap: 8px; justify-content: center; margin-bottom: 24px;
+        }
+        .thinking-dot {
+            width: 12px; height: 12px; background: var(--accent);
+            border-radius: 50%; animation: bounce 1.4s infinite ease-in-out;
+        }
+        .thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+        .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        .thinking p { color: var(--text-muted); font-size: 16px; font-weight: 500; }
+
+        .toast {
+            position: fixed; bottom: 40px; left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: var(--success); color: var(--bg);
+            padding: 12px 24px; border-radius: 12px; font-size: 14px;
+            font-weight: 600; opacity: 0; transition: all 0.3s ease;
+            pointer-events: none; z-index: 100;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        @media (max-width: 600px) {
+            .app { padding: 24px 16px; }
+            .question-card, .summary-card { padding: 28px 20px; }
+            .welcome h1 { font-size: 28px; }
+            .team-select { grid-template-columns: 1fr; }
+            .question-text { font-size: 18px; }
+            .bot-name { font-size: 22px; }
+            .actions { flex-direction: column; }
+            .btn { justify-content: center; }
+            .custom-input-row { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="app" id="app"></div>
+    <div class="toast" id="toast">Copied to clipboard!</div>
+
+    <script>
+    // ─── Question Engine ───
+    const QUESTIONS = {
+        // ── CREATIVE TRACK ──
+        creative_role: {
+            text: "What best describes your role?",
+            subtitle: "This helps us understand your day-to-day context.",
+            customPlaceholder: "Or describe your role in your own words...",
+            options: [
+                { label: "Copywriter / Content Creator", next: "creative_challenge", tags: ["role:copywriter"] },
+                { label: "Graphic / Visual Designer", next: "creative_challenge", tags: ["role:designer"] },
+                { label: "Art Director / Creative Lead", next: "creative_challenge", tags: ["role:art_director"] },
+                { label: "Video / Motion Designer", next: "creative_challenge", tags: ["role:video"] },
+                { label: "Social Media Specialist", next: "creative_challenge", tags: ["role:social"] }
+            ]
+        },
+        creative_challenge: {
+            text: "What's the biggest challenge you face regularly?",
+            subtitle: "Think about what slows you down or frustrates you most.",
+            customPlaceholder: "Or describe your challenge...",
+            options: [
+                { label: "Coming up with fresh ideas under tight deadlines", next: "creative_ideation_freq", tags: ["challenge:ideation"] },
+                { label: "Repetitive tasks that eat into creative time", next: "creative_repetitive_what", tags: ["challenge:repetitive"] },
+                { label: "Managing feedback and revision rounds", next: "creative_feedback_pain", tags: ["challenge:feedback"] },
+                { label: "Keeping up with trends and competitor work", next: "creative_research_scope", tags: ["challenge:research"] },
+                { label: "Adapting content across multiple formats/platforms", next: "creative_adaptation_type", tags: ["challenge:adaptation"] },
+                { label: "Collaborating with client servicing / other teams", next: "creative_collab_pain", tags: ["challenge:collaboration"] },
+                { label: "Quality control and brand consistency", next: "creative_qc_what", tags: ["challenge:quality_control"] }
+            ]
+        },
+
+        // Ideation branch
+        creative_ideation_freq: {
+            text: "How often do you need to generate new creative concepts?",
+            subtitle: "Frequency helps us understand the scale of the problem.",
+            customPlaceholder: "Or describe your situation...",
+            options: [
+                { label: "Multiple times a day — it's relentless", next: "creative_ideation_type", tags: ["freq:very_high"] },
+                { label: "A few times a week for different clients", next: "creative_ideation_type", tags: ["freq:high"] },
+                { label: "Weekly, but each one requires deep thinking", next: "creative_ideation_type", tags: ["freq:moderate"] }
+            ]
+        },
+        creative_ideation_type: {
+            text: "What kind of ideation do you struggle with most?",
+            customPlaceholder: "Or describe what you struggle with...",
+            options: [
+                { label: "Campaign concepts and big ideas", next: "creative_ideation_input", tags: ["ideation:campaigns"] },
+                { label: "Social media content angles", next: "creative_ideation_input", tags: ["ideation:social"] },
+                { label: "Headlines, taglines, and copy hooks", next: "creative_ideation_input", tags: ["ideation:copy"] },
+                { label: "Visual concepts and mood directions", next: "creative_ideation_input", tags: ["ideation:visual"] },
+                { label: "Video/motion concepts and storyboards", next: "creative_ideation_input", tags: ["ideation:video"] },
+                { label: "Naming — product names, campaign names, brand names", next: "creative_ideation_input", tags: ["ideation:naming"] }
+            ]
+        },
+        creative_ideation_input: {
+            text: "What do you usually start with when brainstorming?",
+            customPlaceholder: "Or describe your starting point...",
+            options: [
+                { label: "A client brief with objectives", next: "creative_output_pref", tags: ["input:brief"] },
+                { label: "A competitor reference or inspiration", next: "creative_output_pref", tags: ["input:reference"] },
+                { label: "A blank page — that's the problem", next: "creative_output_pref", tags: ["input:blank"] },
+                { label: "Past work I want to improve upon", next: "creative_output_pref", tags: ["input:past_work"] },
+                { label: "Data or audience insights", next: "creative_output_pref", tags: ["input:data"] }
+            ]
+        },
+
+        // Repetitive tasks branch
+        creative_repetitive_what: {
+            text: "Which repetitive task drains you the most?",
+            customPlaceholder: "Or describe the task...",
+            options: [
+                { label: "Resizing and reformatting assets for different platforms", next: "creative_repetitive_volume", tags: ["repetitive:resizing"] },
+                { label: "Writing variations of the same copy", next: "creative_repetitive_volume", tags: ["repetitive:copy_variations"] },
+                { label: "Organizing and tagging files and assets", next: "creative_repetitive_volume", tags: ["repetitive:organizing"] },
+                { label: "Creating reports or status updates", next: "creative_repetitive_volume", tags: ["repetitive:reporting"] },
+                { label: "Setting up templates and master files", next: "creative_repetitive_volume", tags: ["repetitive:templates"] },
+                { label: "Captioning and subtitling videos", next: "creative_repetitive_volume", tags: ["repetitive:captioning"] },
+                { label: "Scheduling and publishing content", next: "creative_repetitive_volume", tags: ["repetitive:scheduling"] }
+            ]
+        },
+        creative_repetitive_volume: {
+            text: "How much time per week do you estimate this eats up?",
+            customPlaceholder: "Or give your own estimate...",
+            options: [
+                { label: "2-4 hours — annoying but manageable", next: "creative_output_pref", tags: ["volume:medium"] },
+                { label: "5-10 hours — it's a serious problem", next: "creative_output_pref", tags: ["volume:high"] },
+                { label: "10+ hours — it's basically my whole job now", next: "creative_output_pref", tags: ["volume:critical"] }
+            ]
+        },
+
+        // Feedback branch
+        creative_feedback_pain: {
+            text: "What's the worst part about the feedback process?",
+            customPlaceholder: "Or describe your pain point...",
+            options: [
+                { label: "Feedback comes scattered across email, Slack, and comments", next: "creative_feedback_who", tags: ["feedback:scattered"] },
+                { label: "Contradictory feedback from different stakeholders", next: "creative_feedback_who", tags: ["feedback:contradictory"] },
+                { label: "Too many revision rounds before approval", next: "creative_feedback_who", tags: ["feedback:rounds"] },
+                { label: "Vague feedback that's hard to act on", next: "creative_feedback_who", tags: ["feedback:vague"] }
+            ]
+        },
+        creative_feedback_who: {
+            text: "Who gives you the most feedback?",
+            customPlaceholder: "Or describe who...",
+            options: [
+                { label: "Client servicing / account managers", next: "creative_output_pref", tags: ["feedback_from:cs"] },
+                { label: "Clients directly", next: "creative_output_pref", tags: ["feedback_from:client"] },
+                { label: "Creative leads / art directors", next: "creative_output_pref", tags: ["feedback_from:creative_lead"] },
+                { label: "Multiple stakeholders — it's chaotic", next: "creative_output_pref", tags: ["feedback_from:multiple"] }
+            ]
+        },
+
+        // Research branch
+        creative_research_scope: {
+            text: "What kind of research takes the most effort?",
+            customPlaceholder: "Or describe what you research...",
+            options: [
+                { label: "Monitoring competitor campaigns and ads", next: "creative_research_freq", tags: ["research:competitor"] },
+                { label: "Tracking social media trends and viral content", next: "creative_research_freq", tags: ["research:trends"] },
+                { label: "Finding references and inspiration for pitches", next: "creative_research_freq", tags: ["research:inspiration"] },
+                { label: "Analyzing what's working in our own campaigns", next: "creative_research_freq", tags: ["research:analytics"] },
+                { label: "Audience research and persona building", next: "creative_research_freq", tags: ["research:audience"] }
+            ]
+        },
+        creative_research_freq: {
+            text: "How do you currently do this research?",
+            customPlaceholder: "Or describe your process...",
+            options: [
+                { label: "Manually scrolling through platforms and websites", next: "creative_output_pref", tags: ["method:manual"] },
+                { label: "Google searches and saving bookmarks", next: "creative_output_pref", tags: ["method:google"] },
+                { label: "Using some tools but it's still time-consuming", next: "creative_output_pref", tags: ["method:tools"] },
+                { label: "I don't — I just don't have time", next: "creative_output_pref", tags: ["method:none"] }
+            ]
+        },
+
+        // Adaptation branch
+        creative_adaptation_type: {
+            text: "What kind of adaptation do you deal with most?",
+            customPlaceholder: "Or describe the adaptation...",
+            options: [
+                { label: "One campaign → multiple social platforms", next: "creative_adaptation_pain", tags: ["adapt:multi_platform"] },
+                { label: "English content → Arabic (or vice versa)", next: "creative_adaptation_pain", tags: ["adapt:bilingual"] },
+                { label: "Print assets → digital (or vice versa)", next: "creative_adaptation_pain", tags: ["adapt:format"] },
+                { label: "One master creative → client-specific versions", next: "creative_adaptation_pain", tags: ["adapt:versioning"] },
+                { label: "Long-form → short-form (or vice versa)", next: "creative_adaptation_pain", tags: ["adapt:length"] }
+            ]
+        },
+        creative_adaptation_pain: {
+            text: "What makes the adaptation painful?",
+            customPlaceholder: "Or explain in your own words...",
+            options: [
+                { label: "Each platform has different specs and best practices", next: "creative_output_pref", tags: ["adapt_pain:specs"] },
+                { label: "The tone and messaging needs to shift per audience", next: "creative_output_pref", tags: ["adapt_pain:tone"] },
+                { label: "It's just tedious busywork, not creative work", next: "creative_output_pref", tags: ["adapt_pain:tedious"] },
+                { label: "Quality drops when rushing through adaptations", next: "creative_output_pref", tags: ["adapt_pain:quality"] }
+            ]
+        },
+
+        // Collaboration branch (NEW)
+        creative_collab_pain: {
+            text: "What's the hardest part of working with other teams?",
+            customPlaceholder: "Or describe the issue...",
+            options: [
+                { label: "Briefs arrive unclear or incomplete", next: "creative_collab_result", tags: ["collab:bad_briefs"] },
+                { label: "Constant back-and-forth on scope and expectations", next: "creative_collab_result", tags: ["collab:scope_creep"] },
+                { label: "Misalignment on timelines and priorities", next: "creative_collab_result", tags: ["collab:timelines"] },
+                { label: "Creative direction gets diluted by committee", next: "creative_collab_result", tags: ["collab:committee"] }
+            ]
+        },
+        creative_collab_result: {
+            text: "What usually happens as a result?",
+            customPlaceholder: "Or explain the impact...",
+            options: [
+                { label: "Rework and wasted creative hours", next: "creative_output_pref", tags: ["collab_result:rework"] },
+                { label: "Frustration and low morale", next: "creative_output_pref", tags: ["collab_result:morale"] },
+                { label: "Missed deadlines and rushed output", next: "creative_output_pref", tags: ["collab_result:delays"] },
+                { label: "Mediocre work that nobody's proud of", next: "creative_output_pref", tags: ["collab_result:mediocre"] }
+            ]
+        },
+
+        // Quality control branch (NEW)
+        creative_qc_what: {
+            text: "Where does quality slip the most?",
+            customPlaceholder: "Or describe the quality issue...",
+            options: [
+                { label: "Brand inconsistency across deliverables", next: "creative_qc_when", tags: ["qc:brand_inconsistency"] },
+                { label: "Typos, grammar issues, or wrong information", next: "creative_qc_when", tags: ["qc:errors"] },
+                { label: "Design inconsistency (fonts, colors, spacing)", next: "creative_qc_when", tags: ["qc:design_inconsistency"] },
+                { label: "Wrong specs or formats sent to clients", next: "creative_qc_when", tags: ["qc:wrong_specs"] }
+            ]
+        },
+        creative_qc_when: {
+            text: "When does this usually happen?",
+            customPlaceholder: "Or describe the pattern...",
+            options: [
+                { label: "When we're rushing to meet deadlines", next: "creative_output_pref", tags: ["qc_when:rushing"] },
+                { label: "When multiple people touch the same deliverable", next: "creative_output_pref", tags: ["qc_when:handoffs"] },
+                { label: "When adapting work across many formats", next: "creative_output_pref", tags: ["qc_when:adapting"] },
+                { label: "Always — we don't have a proper QC process", next: "creative_output_pref", tags: ["qc_when:no_process"] }
+            ]
+        },
+
+        // Final creative questions
+        creative_output_pref: {
+            text: "If an AI bot could help you, what would matter most?",
+            subtitle: "What's your top priority for a bot assistant?",
+            customPlaceholder: "Or describe what matters to you...",
+            options: [
+                { label: "Speed — get things done faster", next: "creative_comfort", tags: ["priority:speed"] },
+                { label: "Quality — better output with less effort", next: "creative_comfort", tags: ["priority:quality"] },
+                { label: "Creativity — fresh perspectives and ideas", next: "creative_comfort", tags: ["priority:creativity"] },
+                { label: "Organization — keep everything tidy and tracked", next: "creative_comfort", tags: ["priority:organization"] },
+                { label: "Consistency — same quality every time", next: "creative_comfort", tags: ["priority:consistency"] }
+            ]
+        },
+        creative_comfort: {
+            text: "How comfortable are you with AI tools?",
+            subtitle: "Be honest — this helps us design the right experience.",
+            customPlaceholder: "Or share your experience level...",
+            options: [
+                { label: "Very — I already use ChatGPT, Midjourney, etc.", next: "creative_dream", tags: ["comfort:high"] },
+                { label: "Somewhat — I've tried a few things", next: "creative_dream", tags: ["comfort:medium"] },
+                { label: "Not very — I'm curious but haven't dived in", next: "creative_dream", tags: ["comfort:low"] },
+                { label: "I'm skeptical but open to being convinced", next: "creative_dream", tags: ["comfort:skeptical"] }
+            ]
+        },
+        creative_dream: {
+            text: "If you had a perfect AI assistant, what would it do for you first thing tomorrow morning?",
+            subtitle: "Pick the one that excites you most.",
+            customPlaceholder: "Or describe your dream AI assistant...",
+            options: [
+                { label: "Have 5 campaign concepts ready based on the brief I uploaded last night", next: null, tags: ["dream:concepts_ready"] },
+                { label: "Automatically resize yesterday's approved designs for all platforms", next: null, tags: ["dream:auto_resize"] },
+                { label: "Show me a digest of what competitors posted and what's trending", next: null, tags: ["dream:trend_digest"] },
+                { label: "Organize all the feedback from yesterday into one clear action list", next: null, tags: ["dream:feedback_organized"] },
+                { label: "Draft all the copy variations I need for today's deliverables", next: null, tags: ["dream:copy_drafts"] },
+                { label: "Check all yesterday's work against brand guidelines before I send it", next: null, tags: ["dream:brand_check"] },
+                { label: "Generate a storyboard from the video brief that came in last night", next: null, tags: ["dream:storyboard"] }
+            ]
+        },
+
+        // ── CLIENT SERVICING TRACK ──
+        cs_role: {
+            text: "What best describes your role?",
+            subtitle: "This helps us understand your day-to-day context.",
+            customPlaceholder: "Or describe your role...",
+            options: [
+                { label: "Account Manager", next: "cs_challenge", tags: ["role:account_manager"] },
+                { label: "Account Executive", next: "cs_challenge", tags: ["role:account_exec"] },
+                { label: "Project Manager", next: "cs_challenge", tags: ["role:project_manager"] },
+                { label: "Strategy / Planning", next: "cs_challenge", tags: ["role:strategist"] },
+                { label: "Client Relationship / New Business", next: "cs_challenge", tags: ["role:new_business"] }
+            ]
+        },
+        cs_challenge: {
+            text: "What's the biggest challenge you face regularly?",
+            subtitle: "Think about what slows you down or causes the most stress.",
+            customPlaceholder: "Or describe your challenge...",
+            options: [
+                { label: "Keeping clients updated and managing communications", next: "cs_comms_type", tags: ["challenge:communications"] },
+                { label: "Tracking project timelines and deliverables", next: "cs_tracking_pain", tags: ["challenge:tracking"] },
+                { label: "Bridging the gap between client requests and creative team", next: "cs_bridge_pain", tags: ["challenge:bridging"] },
+                { label: "Preparing reports, proposals, and presentations", next: "cs_docs_type", tags: ["challenge:documentation"] },
+                { label: "Managing multiple clients and context-switching", next: "cs_multitask_pain", tags: ["challenge:multitasking"] },
+                { label: "Onboarding new clients or team members", next: "cs_onboard_pain", tags: ["challenge:onboarding"] },
+                { label: "Managing budgets, scopes, and financials", next: "cs_finance_pain", tags: ["challenge:financials"] }
+            ]
+        },
+
+        // Communications branch
+        cs_comms_type: {
+            text: "What type of client communication takes the most time?",
+            customPlaceholder: "Or describe the type...",
+            options: [
+                { label: "Writing status update emails", next: "cs_comms_freq", tags: ["comms:status_emails"] },
+                { label: "Responding to client questions and requests", next: "cs_comms_freq", tags: ["comms:responses"] },
+                { label: "Preparing meeting agendas and follow-up notes", next: "cs_comms_freq", tags: ["comms:meetings"] },
+                { label: "Translating client feedback to internal briefs", next: "cs_comms_freq", tags: ["comms:translating"] },
+                { label: "Writing recaps and SOWs after calls", next: "cs_comms_freq", tags: ["comms:recaps"] }
+            ]
+        },
+        cs_comms_freq: {
+            text: "How many clients do you manage simultaneously?",
+            customPlaceholder: "Or give your own answer...",
+            options: [
+                { label: "1-3 clients — but they're demanding", next: "cs_output_pref", tags: ["clients:few_demanding"] },
+                { label: "4-7 clients — juggling act", next: "cs_output_pref", tags: ["clients:moderate"] },
+                { label: "8+ clients — it's chaos", next: "cs_output_pref", tags: ["clients:many"] }
+            ]
+        },
+
+        // Tracking branch
+        cs_tracking_pain: {
+            text: "What's the hardest part about tracking projects?",
+            customPlaceholder: "Or describe the issue...",
+            options: [
+                { label: "No single source of truth — info is everywhere", next: "cs_tracking_tools", tags: ["tracking:fragmented"] },
+                { label: "Things fall through the cracks despite our best efforts", next: "cs_tracking_tools", tags: ["tracking:missed"] },
+                { label: "Hard to see the big picture across all projects", next: "cs_tracking_tools", tags: ["tracking:visibility"] },
+                { label: "Deadlines shift constantly and it's hard to keep up", next: "cs_tracking_tools", tags: ["tracking:shifting"] }
+            ]
+        },
+        cs_tracking_tools: {
+            text: "What tools do you currently use for project tracking?",
+            customPlaceholder: "Or name your tools...",
+            options: [
+                { label: "Spreadsheets (Excel, Google Sheets)", next: "cs_output_pref", tags: ["tools:spreadsheets"] },
+                { label: "Project management tools (Asana, Monday, Trello)", next: "cs_output_pref", tags: ["tools:pm_software"] },
+                { label: "Email and chat threads", next: "cs_output_pref", tags: ["tools:email"] },
+                { label: "A mix of everything — nothing centralized", next: "cs_output_pref", tags: ["tools:mixed"] }
+            ]
+        },
+
+        // Bridging branch
+        cs_bridge_pain: {
+            text: "What makes the client-to-creative handoff difficult?",
+            customPlaceholder: "Or describe the problem...",
+            options: [
+                { label: "Client briefs are unclear and need a lot of interpretation", next: "cs_bridge_result", tags: ["bridge:unclear_briefs"] },
+                { label: "Creative team pushes back on unrealistic client expectations", next: "cs_bridge_result", tags: ["bridge:pushback"] },
+                { label: "Lost in translation — what client means vs. what gets delivered", next: "cs_bridge_result", tags: ["bridge:lost_translation"] },
+                { label: "Too many back-and-forth cycles before alignment", next: "cs_bridge_result", tags: ["bridge:iterations"] }
+            ]
+        },
+        cs_bridge_result: {
+            text: "What usually happens as a result?",
+            customPlaceholder: "Or explain the impact...",
+            options: [
+                { label: "Missed deadlines", next: "cs_output_pref", tags: ["result:delays"] },
+                { label: "Client dissatisfaction", next: "cs_output_pref", tags: ["result:unhappy_client"] },
+                { label: "Team burnout and frustration", next: "cs_output_pref", tags: ["result:burnout"] },
+                { label: "Rework and wasted creative hours", next: "cs_output_pref", tags: ["result:rework"] }
+            ]
+        },
+
+        // Documentation branch
+        cs_docs_type: {
+            text: "Which type of document takes the most time to prepare?",
+            customPlaceholder: "Or describe the document type...",
+            options: [
+                { label: "Client reports and performance summaries", next: "cs_docs_freq", tags: ["docs:reports"] },
+                { label: "Proposals and pitch decks", next: "cs_docs_freq", tags: ["docs:proposals"] },
+                { label: "Meeting minutes and action items", next: "cs_docs_freq", tags: ["docs:minutes"] },
+                { label: "Creative briefs and project scopes", next: "cs_docs_freq", tags: ["docs:briefs"] },
+                { label: "Competitive analysis and market research decks", next: "cs_docs_freq", tags: ["docs:competitive"] }
+            ]
+        },
+        cs_docs_freq: {
+            text: "How often do you create these?",
+            customPlaceholder: "Or describe the frequency...",
+            options: [
+                { label: "Daily — it's a constant flow", next: "cs_output_pref", tags: ["freq:daily"] },
+                { label: "A few times a week", next: "cs_output_pref", tags: ["freq:weekly"] },
+                { label: "Weekly or bi-weekly", next: "cs_output_pref", tags: ["freq:biweekly"] }
+            ]
+        },
+
+        // Multitasking branch
+        cs_multitask_pain: {
+            text: "What suffers most when you're context-switching?",
+            customPlaceholder: "Or describe what suffers...",
+            options: [
+                { label: "Quality of work — things get rushed", next: "cs_multitask_wish", tags: ["suffer:quality"] },
+                { label: "Response times — clients wait too long", next: "cs_multitask_wish", tags: ["suffer:response_time"] },
+                { label: "My own wellbeing — it's exhausting", next: "cs_multitask_wish", tags: ["suffer:wellbeing"] },
+                { label: "Strategic thinking — no time to think big", next: "cs_multitask_wish", tags: ["suffer:strategy"] }
+            ]
+        },
+        cs_multitask_wish: {
+            text: "If you could offload one thing to a bot right now, what would it be?",
+            customPlaceholder: "Or describe what you'd offload...",
+            options: [
+                { label: "Drafting routine emails and messages", next: "cs_output_pref", tags: ["offload:emails"] },
+                { label: "Keeping track of all to-dos and deadlines", next: "cs_output_pref", tags: ["offload:tracking"] },
+                { label: "Summarizing long email threads and documents", next: "cs_output_pref", tags: ["offload:summaries"] },
+                { label: "Preparing first drafts of reports and decks", next: "cs_output_pref", tags: ["offload:drafts"] }
+            ]
+        },
+
+        // Onboarding branch (NEW)
+        cs_onboard_pain: {
+            text: "What's the biggest onboarding headache?",
+            customPlaceholder: "Or describe the issue...",
+            options: [
+                { label: "Getting new clients up to speed on our process", next: "cs_onboard_volume", tags: ["onboard:client_process"] },
+                { label: "Training new team members on client accounts", next: "cs_onboard_volume", tags: ["onboard:team_training"] },
+                { label: "Documenting client preferences and brand guidelines", next: "cs_onboard_volume", tags: ["onboard:documentation"] },
+                { label: "Knowledge transfer when someone leaves or changes roles", next: "cs_onboard_volume", tags: ["onboard:knowledge_transfer"] }
+            ]
+        },
+        cs_onboard_volume: {
+            text: "How often does this happen?",
+            customPlaceholder: "Or share the frequency...",
+            options: [
+                { label: "Monthly — we're always onboarding someone", next: "cs_output_pref", tags: ["onboard_freq:monthly"] },
+                { label: "Quarterly — enough to be painful", next: "cs_output_pref", tags: ["onboard_freq:quarterly"] },
+                { label: "Rarely, but when it happens it's a disaster", next: "cs_output_pref", tags: ["onboard_freq:rare"] }
+            ]
+        },
+
+        // Financials branch (NEW)
+        cs_finance_pain: {
+            text: "What's the most painful part of managing budgets?",
+            customPlaceholder: "Or describe the pain point...",
+            options: [
+                { label: "Scope creep — clients keep adding things without budget increase", next: "cs_finance_impact", tags: ["finance:scope_creep"] },
+                { label: "Estimating hours and costs accurately for proposals", next: "cs_finance_impact", tags: ["finance:estimation"] },
+                { label: "Tracking actual spend vs. budgeted across projects", next: "cs_finance_impact", tags: ["finance:tracking"] },
+                { label: "Invoicing and reconciliation takes forever", next: "cs_finance_impact", tags: ["finance:invoicing"] }
+            ]
+        },
+        cs_finance_impact: {
+            text: "What's the business impact?",
+            customPlaceholder: "Or describe the impact...",
+            options: [
+                { label: "We lose money on projects without realizing it", next: "cs_output_pref", tags: ["finance_impact:loss"] },
+                { label: "Proposals take too long and we miss opportunities", next: "cs_output_pref", tags: ["finance_impact:slow_proposals"] },
+                { label: "Client disputes over billing and scope", next: "cs_output_pref", tags: ["finance_impact:disputes"] },
+                { label: "No visibility into profitability per client", next: "cs_output_pref", tags: ["finance_impact:no_visibility"] }
+            ]
+        },
+
+        // Final CS questions
+        cs_output_pref: {
+            text: "If an AI bot could help you, what would matter most?",
+            subtitle: "What's your top priority for a bot assistant?",
+            customPlaceholder: "Or describe what matters...",
+            options: [
+                { label: "Speed — faster turnaround on everything", next: "cs_comfort", tags: ["priority:speed"] },
+                { label: "Accuracy — fewer mistakes and missed items", next: "cs_comfort", tags: ["priority:accuracy"] },
+                { label: "Visibility — always know where things stand", next: "cs_comfort", tags: ["priority:visibility"] },
+                { label: "Communication — better, clearer messaging", next: "cs_comfort", tags: ["priority:communication"] },
+                { label: "Profitability — better budget and resource management", next: "cs_comfort", tags: ["priority:profitability"] }
+            ]
+        },
+        cs_comfort: {
+            text: "How comfortable are you with AI tools?",
+            subtitle: "Be honest — this helps us design the right experience.",
+            customPlaceholder: "Or share your experience level...",
+            options: [
+                { label: "Very — I already use ChatGPT, Copilot, etc.", next: "cs_dream", tags: ["comfort:high"] },
+                { label: "Somewhat — I've experimented a bit", next: "cs_dream", tags: ["comfort:medium"] },
+                { label: "Not very — but I'm open to trying", next: "cs_dream", tags: ["comfort:low"] },
+                { label: "I'm skeptical but willing to see results", next: "cs_dream", tags: ["comfort:skeptical"] }
+            ]
+        },
+        cs_dream: {
+            text: "Imagine your perfect AI assistant. What does it do for you first thing tomorrow morning?",
+            subtitle: "Pick the one that excites you most.",
+            customPlaceholder: "Or describe your dream assistant...",
+            options: [
+                { label: "Show me a dashboard of all my projects with what needs attention today", next: null, tags: ["dream:dashboard"] },
+                { label: "Draft all my client update emails based on yesterday's progress", next: null, tags: ["dream:email_drafts"] },
+                { label: "Summarize every client conversation and extract action items automatically", next: null, tags: ["dream:auto_summary"] },
+                { label: "Generate a first draft of the weekly performance report", next: null, tags: ["dream:auto_report"] },
+                { label: "Alert me to at-risk projects before clients even notice", next: null, tags: ["dream:early_warning"] },
+                { label: "Show me profitability per client and flag scope creep", next: null, tags: ["dream:profitability"] },
+                { label: "Prepare onboarding packs for the new client starting next week", next: null, tags: ["dream:onboarding_pack"] }
+            ]
+        }
+    };
+
+    // ─── Bot Recommendation Engine (30+ bots) ───
+    function generateBotIdea(team, tags, customInputs) {
+        const has = (t) => tags.includes(t);
+        const hasAny = (...ts) => ts.some(t => tags.includes(t));
+
+        // ── CREATIVE TEAM BOTS ──
+        if (team === 'creative') {
+
+            // Quality control bots (NEW)
+            if (has('challenge:quality_control')) {
+                if (has('qc:brand_inconsistency')) {
+                    return {
+                        name: "BrandGuard",
+                        tagline: "Your AI brand police — catches inconsistencies before clients do.",
+                        description: "BrandGuard scans every deliverable against your client's brand guidelines (colors, fonts, tone of voice, logo usage) and flags violations before anything goes out the door.",
+                        features: [
+                            "Upload brand guidelines once → auto-checks every deliverable",
+                            "Scans designs for color, font, and logo compliance",
+                            "Checks copy for tone-of-voice alignment and terminology",
+                            "Generates a brand compliance scorecard per deliverable",
+                            "Maintains a living brand guide that evolves with client feedback"
+                        ],
+                        howItWorks: "Load each client's brand guidelines into BrandGuard. Before you send any deliverable, run it through the checker. It highlights violations with specific fix suggestions."
+                    };
+                }
+                if (has('qc:errors')) {
+                    return {
+                        name: "ProofBot",
+                        tagline: "Catches every typo, factual error, and inconsistency across all your work.",
+                        description: "ProofBot is more than a spellchecker — it understands context, catches factual errors, verifies consistency across documents, and ensures nothing embarrassing reaches the client.",
+                        features: [
+                            "Deep proofreading: grammar, spelling, punctuation, and style",
+                            "Fact-checking against provided source materials",
+                            "Consistency checks across multi-page documents and campaigns",
+                            "Client-specific terminology and style rule enforcement",
+                            "Bilingual proofing for English and Arabic content"
+                        ],
+                        howItWorks: "Upload your deliverable and optionally the source brief. ProofBot scans for every type of error, from simple typos to factual inconsistencies. Review the flagged items and fix in one click."
+                    };
+                }
+                if (has('qc:design_inconsistency')) {
+                    return {
+                        name: "PixelPerfect",
+                        tagline: "Ensures every design is consistent, on-spec, and production-ready.",
+                        description: "PixelPerfect checks your design files for consistency in spacing, alignment, font usage, color accuracy, and export specs — catching the small issues that add up to unprofessional output.",
+                        features: [
+                            "Automated design QC checklist per file type",
+                            "Checks spacing, alignment, and padding consistency",
+                            "Verifies correct color profiles and export settings",
+                            "Font usage audit: flags unauthorized or inconsistent fonts",
+                            "Generates a pre-flight report before client delivery"
+                        ],
+                        howItWorks: "Connect to your design tool or upload files. PixelPerfect runs a comprehensive QC check and produces a report highlighting every issue with visual annotations."
+                    };
+                }
+                return {
+                    name: "QualityShield",
+                    tagline: "Automated quality control that catches what tired eyes miss.",
+                    description: "QualityShield is a comprehensive QC bot that checks deliverables for brand compliance, errors, correct specs, and consistency before they reach the client.",
+                    features: [
+                        "Multi-layer QC: brand, copy, design, and specs",
+                        "Pre-delivery checklist automation",
+                        "Flags issues with severity levels (critical vs. minor)",
+                        "Integration with design and document tools",
+                        "QC history tracking per client and project"
+                    ],
+                    howItWorks: "Before sending any deliverable, run it through QualityShield. It performs a comprehensive check and returns a pass/fail report with specific items to fix."
+                };
+            }
+
+            // Collaboration bots (NEW)
+            if (has('challenge:collaboration')) {
+                if (hasAny('collab:bad_briefs', 'collab:scope_creep')) {
+                    return {
+                        name: "BriefRefiner",
+                        tagline: "Turns vague briefs into actionable creative directions — before work starts.",
+                        description: "BriefRefiner analyzes incoming briefs for completeness, clarity, and actionability. It flags gaps, asks smart clarifying questions, and restructures messy briefs into a format your team can run with.",
+                        features: [
+                            "Brief completeness scoring: highlights what's missing",
+                            "Auto-generates clarifying questions for account teams",
+                            "Restructures messy briefs into your preferred template",
+                            "Scope definition: flags when requests are too broad or ambiguous",
+                            "Historical comparison: 'Similar briefs led to X revisions'"
+                        ],
+                        howItWorks: "When a new brief lands, run it through BriefRefiner. It scores completeness, generates questions to send back, and restructures the brief once answers come in."
+                    };
+                }
+                return {
+                    name: "TeamSync",
+                    tagline: "Keeps creative and account teams aligned without the endless meetings.",
+                    description: "TeamSync creates a shared workspace between creative and client servicing teams with real-time status, automated handoff checklists, and smart notifications that reduce misalignment.",
+                    features: [
+                        "Shared project status visible to both teams",
+                        "Automated handoff checklists at each project stage",
+                        "Smart notifications: only alert people when they need to act",
+                        "Conflict detector: flags when timelines or priorities clash",
+                        "Weekly alignment summary auto-generated"
+                    ],
+                    howItWorks: "TeamSync sits on top of your existing tools and creates a bridge between creative and account teams. It automates status updates, ensures clean handoffs, and flags misalignment early."
+                };
+            }
+
+            // Ideation bots
+            if (has('challenge:ideation')) {
+                if (hasAny('ideation:campaigns', 'ideation:visual')) {
+                    return {
+                        name: "BriefSpark",
+                        tagline: "Turns client briefs into a springboard of creative campaign concepts.",
+                        description: "BriefSpark reads your client brief and generates 5-10 creative campaign concepts complete with mood direction, key messaging angles, and execution ideas. It learns from your agency's past winning work.",
+                        features: [
+                            "Upload a brief \u2192 get campaign concepts in under 60 seconds",
+                            "Each concept comes with a tagline, visual mood description, and key execution ideas",
+                            "Filter by tone (bold, minimal, playful, premium) and platform focus",
+                            "Save and build on concepts you like \u2014 it remembers your preferences",
+                            "Learns from your agency's award-winning campaigns over time"
+                        ],
+                        howItWorks: "You paste or upload the client brief. BriefSpark analyzes the objectives, audience, and brand constraints, then generates diverse creative directions. You pick, refine, and build on the ones that spark something."
+                    };
+                }
+                if (has('ideation:copy')) {
+                    return {
+                        name: "HookFactory",
+                        tagline: "Your tireless brainstorming partner for headlines, taglines, and content hooks.",
+                        description: "HookFactory generates dozens of headline and copy variations based on your brief, brand voice, and target audience. It's like having a copywriting brainstorm buddy available 24/7.",
+                        features: [
+                            "Input your topic, audience, and tone \u2192 get 20+ headline variations",
+                            "Toggle between styles: punchy, emotional, provocative, informative",
+                            "Social-first mode: generates hooks optimized for scroll-stopping",
+                            "A/B test suggestions with reasoning for why each might work",
+                            "Supports both English and Arabic copy generation"
+                        ],
+                        howItWorks: "Describe what you're writing for (product, campaign, platform) and set your tone. HookFactory generates a wall of options, grouped by style. Pick your favorites and ask it to generate 10 more in that direction."
+                    };
+                }
+                if (has('ideation:social')) {
+                    return {
+                        name: "ContentSpark",
+                        tagline: "Never stare at a blank content calendar again.",
+                        description: "ContentSpark generates a month's worth of social media content ideas, angles, and hooks based on your client's brand, industry trends, and upcoming cultural moments.",
+                        features: [
+                            "Monthly content calendar generation with daily post ideas",
+                            "Tie-ins to cultural moments, holidays, and trending topics",
+                            "Content pillar mapping: ensures balanced content mix",
+                            "Caption drafts with hashtag recommendations per platform",
+                            "Performance-based suggestions: doubles down on what's working"
+                        ],
+                        howItWorks: "Input the client's brand, content pillars, and target audience. ContentSpark generates a full content calendar with ideas, captions, and visual direction for each post."
+                    };
+                }
+                if (has('ideation:video')) {
+                    return {
+                        name: "StoryForge",
+                        tagline: "From brief to storyboard in minutes, not days.",
+                        description: "StoryForge takes a video brief and generates shot-by-shot storyboards with scene descriptions, dialogue suggestions, and visual references — giving your video team a head start.",
+                        features: [
+                            "Brief \u2192 storyboard with scene-by-scene breakdowns",
+                            "Shot type suggestions (wide, close-up, drone, etc.)",
+                            "Dialogue and voiceover script drafts",
+                            "Music mood and pacing recommendations",
+                            "Reference image suggestions for each scene"
+                        ],
+                        howItWorks: "Upload the video brief. StoryForge generates a storyboard framework with shot descriptions, dialogue, and visual references. Your team refines and brings it to life."
+                    };
+                }
+                if (has('ideation:naming')) {
+                    return {
+                        name: "NameSmith",
+                        tagline: "Generates brand names, campaign names, and product names that actually stick.",
+                        description: "NameSmith combines linguistic creativity with market awareness to generate naming options that are memorable, available, and culturally appropriate across English and Arabic.",
+                        features: [
+                            "Input context \u2192 get 50+ name options grouped by style",
+                            "Styles: descriptive, abstract, compound, acronym, invented",
+                            "Basic domain and social handle availability check",
+                            "Cultural sensitivity screening for English and Arabic",
+                            "Rationale for each name explaining why it works"
+                        ],
+                        howItWorks: "Describe what you're naming (product, campaign, brand), the tone, and target audience. NameSmith generates batches of options with reasoning. Pick your favorites and refine."
+                    };
+                }
+                // Default ideation with data input
+                return {
+                    name: "InsightSpark",
+                    tagline: "Turns data and audience insights into creative springboards.",
+                    description: "InsightSpark analyzes audience data, campaign performance, and market research to surface the most compelling creative angles and opportunities your team should explore.",
+                    features: [
+                        "Connects to analytics to find high-performing content patterns",
+                        "Audience insight cards: what they care about, how they talk",
+                        "Creative opportunity briefs generated from data",
+                        "Competitive gap analysis: what nobody else is doing",
+                        "Monthly creative intelligence reports"
+                    ],
+                    howItWorks: "Feed InsightSpark your analytics data and audience research. It identifies patterns, gaps, and opportunities, then generates creative brief seeds your team can develop."
+                };
+            }
+
+            // Repetitive task bots
+            if (has('challenge:repetitive')) {
+                if (has('repetitive:resizing')) {
+                    return {
+                        name: "AdaptBot",
+                        tagline: "Automatically resizes and reformats your creative assets for every platform.",
+                        description: "AdaptBot takes your master design and intelligently adapts it for every platform spec you need \u2014 social stories, feed posts, web banners, print \u2014 while maintaining design integrity.",
+                        features: [
+                            "Upload one master design \u2192 get all platform sizes instantly",
+                            "Smart cropping that keeps focal points and text legible",
+                            "Pre-loaded specs for Instagram, Facebook, LinkedIn, Twitter, TikTok, and more",
+                            "Custom spec profiles for your agency's frequent deliverables",
+                            "Batch processing for campaign rollouts with multiple assets"
+                        ],
+                        howItWorks: "Upload your approved master creative. Select which platforms you need (or choose 'all'). AdaptBot generates every size, respecting safe zones, text placement, and visual hierarchy."
+                    };
+                }
+                if (has('repetitive:copy_variations')) {
+                    return {
+                        name: "VariantWriter",
+                        tagline: "One approved message, endless on-brand variations.",
+                        description: "VariantWriter takes your approved core copy and generates platform-specific, audience-specific, and format-specific variations \u2014 all maintaining the same message and brand voice.",
+                        features: [
+                            "Input core message \u2192 get variations for email, social, ads, web",
+                            "Adjust length, tone, and CTA per variant",
+                            "Character-count aware: respects platform limits automatically",
+                            "Built-in brand voice profiles per client",
+                            "Bilingual support: English \u2194 Arabic adaptation (not just translation)"
+                        ],
+                        howItWorks: "Paste your approved core copy and select the channels/formats you need. VariantWriter crafts each version respecting the platform's best practices and your client's brand guidelines."
+                    };
+                }
+                if (has('repetitive:captioning')) {
+                    return {
+                        name: "CaptionBot",
+                        tagline: "Auto-generates captions, subtitles, and transcripts for all your video content.",
+                        description: "CaptionBot transcribes, captions, and subtitles your video content in both English and Arabic, with style customization to match your brand's visual identity.",
+                        features: [
+                            "Auto-transcription from video with high accuracy",
+                            "Styled captions matching your brand fonts and colors",
+                            "Bilingual caption support: English and Arabic",
+                            "SRT/VTT export for any platform",
+                            "Batch processing for multi-video campaigns"
+                        ],
+                        howItWorks: "Upload your video files. CaptionBot transcribes, generates styled captions, and exports in the format you need. Review and adjust timing or text before publishing."
+                    };
+                }
+                if (has('repetitive:scheduling')) {
+                    return {
+                        name: "PublishPilot",
+                        tagline: "Schedules, optimizes, and publishes your content across all platforms.",
+                        description: "PublishPilot takes your approved content and handles the tedious work of scheduling across platforms at optimal times, with platform-specific formatting applied automatically.",
+                        features: [
+                            "Cross-platform scheduling from one dashboard",
+                            "AI-optimized posting times per platform and audience",
+                            "Auto-formatting: adjusts copy and image specs per platform",
+                            "Content calendar visualization with drag-and-drop",
+                            "Performance tracking and re-posting suggestions for top content"
+                        ],
+                        howItWorks: "Upload your approved content batch. PublishPilot formats each piece for its target platform, suggests optimal times, and schedules everything. You approve and it handles the rest."
+                    };
+                }
+                if (has('repetitive:organizing')) {
+                    return {
+                        name: "AssetVault",
+                        tagline: "Auto-organizes, tags, and indexes every creative asset your team produces.",
+                        description: "AssetVault uses AI to automatically name, tag, and organize your creative files so anyone on the team can find anything in seconds instead of digging through folders.",
+                        features: [
+                            "AI-powered auto-tagging: client, campaign, format, date, status",
+                            "Smart search: find assets by describing what you're looking for",
+                            "Duplicate detection to prevent version confusion",
+                            "Usage tracking: see where each asset was used",
+                            "Automated folder structures per client and campaign"
+                        ],
+                        howItWorks: "Connect AssetVault to your file storage. It scans, tags, and organizes existing files, then automatically handles new files as they're added. Search by description, client, or campaign."
+                    };
+                }
+                return {
+                    name: "TaskCrusher",
+                    tagline: "Automates the busywork so you can get back to creating.",
+                    description: "TaskCrusher handles the repetitive operational tasks that eat into your creative time \u2014 from organizing files to generating status reports to setting up templates.",
+                    features: [
+                        "Auto-organize project files by client, campaign, and date",
+                        "Generate status reports from project management tools",
+                        "Template setup automation for recurring deliverable types",
+                        "Smart file naming and tagging suggestions",
+                        "Weekly time-saved dashboard so you can see the impact"
+                    ],
+                    howItWorks: "Connect TaskCrusher to your workflow tools. It learns your patterns and starts automating the most repetitive parts. You approve automation rules, and it handles the rest."
+                };
+            }
+
+            // Feedback bots
+            if (has('challenge:feedback')) {
+                if (hasAny('feedback:vague', 'feedback:contradictory')) {
+                    return {
+                        name: "ClarityBot",
+                        tagline: "Turns vague or conflicting feedback into clear, actionable revision notes.",
+                        description: "ClarityBot analyzes incoming feedback and transforms ambiguous comments like 'make it pop' or 'it doesn't feel right' into specific, actionable creative direction your team can execute on.",
+                        features: [
+                            "Translates vague feedback into specific creative suggestions",
+                            "Detects contradictions and proposes resolution options",
+                            "Asks smart follow-up questions when feedback is unclear",
+                            "Builds a feedback dictionary per client over time",
+                            "Generates a clear revision brief from raw feedback"
+                        ],
+                        howItWorks: "Paste in the raw feedback. ClarityBot identifies vague or conflicting points, translates them into specific actions, and generates a revision brief. If something's truly unclear, it drafts follow-up questions."
+                    };
+                }
+                return {
+                    name: "FeedbackFunnel",
+                    tagline: "Collects scattered feedback, resolves conflicts, and gives you one clear action list.",
+                    description: "FeedbackFunnel aggregates feedback from email, Slack, comments, and meetings into a single organized view. It flags contradictions, prioritizes changes, and creates a clear revision checklist.",
+                    features: [
+                        "Connects to email, Slack, and common design tools for feedback capture",
+                        "Auto-categorizes feedback: copy, design, layout, strategy",
+                        "Flags contradictory feedback and suggests resolution approaches",
+                        "Generates a prioritized revision checklist from all feedback",
+                        "Tracks revision rounds and shows progress toward approval"
+                    ],
+                    howItWorks: "Point FeedbackFunnel at your feedback channels. After stakeholders review, it collates everything into one dashboard. You see what's agreed, what's conflicting, and a clear checklist of changes to make."
+                };
+            }
+
+            // Research bots
+            if (has('challenge:research')) {
+                if (has('research:audience')) {
+                    return {
+                        name: "AudienceLens",
+                        tagline: "Deep audience insights that fuel better creative decisions.",
+                        description: "AudienceLens builds rich audience personas from data, social listening, and market research \u2014 giving your creative team a vivid picture of who they're designing for.",
+                        features: [
+                            "Persona generation from data: demographics, psychographics, behaviors",
+                            "Social listening: what your audience talks about and cares about",
+                            "Content preference analysis: what formats and tones resonate",
+                            "Competitor audience comparison",
+                            "Living personas that update as new data comes in"
+                        ],
+                        howItWorks: "Input your client's target audience parameters. AudienceLens pulls data from available sources to build detailed personas with actionable creative insights."
+                    };
+                }
+                return {
+                    name: "TrendRadar",
+                    tagline: "Your always-on creative intelligence feed.",
+                    description: "TrendRadar monitors competitors, social platforms, and industry feeds to deliver a curated daily digest of what's trending, what competitors are doing, and what's inspiring.",
+                    features: [
+                        "Daily briefing: top trends, competitor launches, viral content",
+                        "Customizable watchlists by industry, competitor, or platform",
+                        "Visual inspiration boards auto-generated from trending content",
+                        "Alerts when a competitor launches a new campaign",
+                        "Monthly trend analysis reports you can share with clients"
+                    ],
+                    howItWorks: "Set up your watchlists (competitors, industries, platforms). TrendRadar scans daily and delivers a curated briefing each morning. Save anything interesting to your inspiration boards."
+                };
+            }
+
+            // Adaptation bots
+            if (has('challenge:adaptation')) {
+                if (has('adapt:bilingual')) {
+                    return {
+                        name: "BridgeLang",
+                        tagline: "Creative adaptation between English and Arabic that actually feels native.",
+                        description: "BridgeLang goes beyond translation \u2014 it culturally adapts your creative copy and messaging between English and Arabic, maintaining the creative intent, emotional tone, and brand voice.",
+                        features: [
+                            "Paste copy in one language \u2192 get culturally adapted version in the other",
+                            "Preserves creative intent, not just literal meaning",
+                            "Brand voice profiles ensure consistency across languages",
+                            "Visual layout suggestions for RTL/LTR design considerations",
+                            "Glossary builder per client for consistent terminology"
+                        ],
+                        howItWorks: "Input your approved copy and select the target language. BridgeLang adapts it with cultural nuance, creative flair, and brand consistency. Review, tweak, and approve."
+                    };
+                }
+                if (has('adapt:length')) {
+                    return {
+                        name: "ContentDistiller",
+                        tagline: "Condenses long-form into punchy short-form \u2014 or expands short into long.",
+                        description: "ContentDistiller transforms content between formats: blog posts into social snippets, social captions into articles, presentations into one-pagers, and back again \u2014 all on-brand.",
+                        features: [
+                            "Long \u2192 short: distills key messages with impact",
+                            "Short \u2192 long: expands core ideas with depth and detail",
+                            "Maintains brand voice and key messaging across lengths",
+                            "Format-aware: knows the conventions of each output format",
+                            "Batch processing for content repurposing at scale"
+                        ],
+                        howItWorks: "Paste your source content and select the target format/length. ContentDistiller transforms it while preserving the core message. Review and publish."
+                    };
+                }
+                return {
+                    name: "ContentChameleon",
+                    tagline: "One piece of content, perfectly adapted for every platform and format.",
+                    description: "ContentChameleon takes your master creative (copy + visual direction) and adapts it for every platform with the right specs, tone, and best practices built in.",
+                    features: [
+                        "Master creative \u2192 platform-specific adaptations (copy + design specs)",
+                        "Tone shifting: professional (LinkedIn) vs. casual (TikTok) vs. visual (Instagram)",
+                        "Auto-generates platform-specific copy lengths and hashtag suggestions",
+                        "Version tracking: see all adaptations from one master in a single view",
+                        "Client approval workflow built in"
+                    ],
+                    howItWorks: "Upload your master creative and select target platforms. ContentChameleon generates each version with appropriate copy adjustments, format specs, and publishing notes."
+                };
+            }
+
+            // Default creative bot
+            return {
+                name: "CreativeCompanion",
+                tagline: "Your AI-powered creative assistant that handles the grind so you can focus on the craft.",
+                description: "CreativeCompanion is a multi-purpose AI assistant designed for agency creatives. It helps with ideation, copy generation, asset organization, and trend tracking \u2014 all in one place.",
+                features: [
+                    "Quick-fire brainstorming mode for campaign concepts",
+                    "Copy generation and variation for multiple platforms",
+                    "Trend and competitor monitoring dashboard",
+                    "Feedback aggregation and revision tracking",
+                    "Asset organization and file management"
+                ],
+                howItWorks: "Tell CreativeCompanion what you're working on \u2014 a brief, a revision, a brainstorm \u2014 and it adapts to help. It learns your style and your clients' brand voices over time."
+            };
+        }
+
+        // ── CLIENT SERVICING BOTS ──
+        if (team === 'cs') {
+
+            // Onboarding bots (NEW)
+            if (has('challenge:onboarding')) {
+                if (has('onboard:client_process')) {
+                    return {
+                        name: "WelcomeBot",
+                        tagline: "Onboards new clients smoothly with automated welcome sequences and process guides.",
+                        description: "WelcomeBot automates the new client onboarding experience \u2014 from welcome emails and process guides to intake questionnaires and kickoff meeting preparation.",
+                        features: [
+                            "Automated welcome email sequences with your branding",
+                            "Dynamic intake questionnaire that adapts to client type",
+                            "Process guide generator customized per service offering",
+                            "Kickoff meeting agenda and materials auto-generated",
+                            "Onboarding checklist tracking per client"
+                        ],
+                        howItWorks: "When a new client signs on, trigger WelcomeBot. It sends the welcome sequence, collects intake information, and generates everything needed for a smooth kickoff."
+                    };
+                }
+                if (has('onboard:knowledge_transfer')) {
+                    return {
+                        name: "BrainDump",
+                        tagline: "Captures institutional knowledge before it walks out the door.",
+                        description: "BrainDump creates structured knowledge bases from team members' expertise through smart interviews, document analysis, and process mapping \u2014 ensuring nothing critical is lost during transitions.",
+                        features: [
+                            "Guided knowledge extraction interviews per client account",
+                            "Auto-generates client account playbooks from conversations",
+                            "Process documentation from screen recordings and notes",
+                            "Searchable knowledge base per client",
+                            "Handoff readiness scoring: flags knowledge gaps"
+                        ],
+                        howItWorks: "Run BrainDump sessions with departing or transitioning team members. It asks structured questions, records insights, and generates a comprehensive account playbook for the next person."
+                    };
+                }
+                return {
+                    name: "OnboardPro",
+                    tagline: "Smooth onboarding for clients and team members \u2014 every single time.",
+                    description: "OnboardPro standardizes and automates onboarding workflows for both new clients and new team members, ensuring nothing gets missed and everyone gets up to speed fast.",
+                    features: [
+                        "Client onboarding workflow automation with checklists",
+                        "Team member onboarding: client account primers auto-generated",
+                        "Document collection and organization per client",
+                        "Brand guidelines and preferences intake automation",
+                        "Progress tracking dashboard for all active onboardings"
+                    ],
+                    howItWorks: "Start a new onboarding (client or team member). OnboardPro runs the workflow, collects information, generates necessary documents, and tracks completion."
+                };
+            }
+
+            // Financials bots (NEW)
+            if (has('challenge:financials')) {
+                if (has('finance:scope_creep')) {
+                    return {
+                        name: "ScopeGuard",
+                        tagline: "Detects scope creep before it eats your margin.",
+                        description: "ScopeGuard monitors project activity against the original scope and budget, alerting you the moment work starts exceeding what was agreed \u2014 with data to back up the conversation.",
+                        features: [
+                            "Tracks deliverables and hours against original scope",
+                            "Real-time alerts when projects trend over-scope",
+                            "Generates scope change documentation for client conversations",
+                            "Historical scope creep analysis per client",
+                            "Suggested scope boundaries for new proposals based on past data"
+                        ],
+                        howItWorks: "Input the original scope and budget for each project. ScopeGuard monitors activity and alerts you when things are trending over. It generates the documentation you need for scope change conversations."
+                    };
+                }
+                if (has('finance:estimation')) {
+                    return {
+                        name: "EstiMate",
+                        tagline: "Accurate project estimates based on your agency's actual historical data.",
+                        description: "EstiMate analyzes your past project data to generate more accurate time and cost estimates for new proposals \u2014 no more guessing or underquoting.",
+                        features: [
+                            "Estimate generator based on similar past projects",
+                            "Confidence scoring: how reliable is this estimate",
+                            "Breakdown by role, phase, and deliverable type",
+                            "Buffer suggestions based on client complexity history",
+                            "Proposal cost section auto-generation"
+                        ],
+                        howItWorks: "Describe the new project scope. EstiMate matches it against your historical data, generates a detailed estimate with confidence levels, and flags areas where past projects went over."
+                    };
+                }
+                return {
+                    name: "ProfitLens",
+                    tagline: "Real-time profitability tracking per client, project, and team.",
+                    description: "ProfitLens gives you visibility into where your agency makes and loses money \u2014 tracking actual spend vs. budget across every project and client in real time.",
+                    features: [
+                        "Real-time profitability dashboard per client and project",
+                        "Budget vs. actual tracking with trend visualization",
+                        "Automated invoicing preparation from tracked hours",
+                        "Client profitability ranking and historical trends",
+                        "Alerts when projects approach budget thresholds"
+                    ],
+                    howItWorks: "Connect ProfitLens to your time tracking and financial tools. It builds a real-time view of profitability across your portfolio and alerts you to issues before they become losses."
+                };
+            }
+
+            // Communications bots
+            if (has('challenge:communications')) {
+                if (has('comms:status_emails')) {
+                    return {
+                        name: "StatusPilot",
+                        tagline: "Drafts client status emails automatically from your project data.",
+                        description: "StatusPilot pulls the latest from your project management tools, timelines, and team updates to draft polished client status emails. You review, tweak, and send.",
+                        features: [
+                            "Connects to your PM tools to pull real-time project status",
+                            "Auto-drafts weekly status emails per client in your tone",
+                            "Highlights risks, delays, and wins automatically",
+                            "Customizable email templates per client relationship",
+                            "One-click send after your review"
+                        ],
+                        howItWorks: "Connect StatusPilot to your project tools. Each morning (or on schedule), it drafts status updates for each client. Review, tweak, and send."
+                    };
+                }
+                if (has('comms:meetings')) {
+                    return {
+                        name: "MeetingMind",
+                        tagline: "Turns every meeting into instant notes, action items, and follow-ups.",
+                        description: "MeetingMind joins your calls (or reads your notes) and produces structured meeting minutes, action items with owners, and draft follow-up emails \u2014 all within minutes.",
+                        features: [
+                            "Auto-generates meeting minutes from notes or recordings",
+                            "Extracts action items with assignees and deadlines",
+                            "Drafts follow-up emails for client and internal distribution",
+                            "Tracks action item completion across meetings",
+                            "Creates pre-meeting briefs from previous meeting context"
+                        ],
+                        howItWorks: "Share your meeting notes or recording. MeetingMind structures everything into minutes, action items, and a follow-up email draft. You approve and distribute."
+                    };
+                }
+                if (has('comms:translating')) {
+                    return {
+                        name: "BriefBuilder",
+                        tagline: "Turns messy client feedback into crystal-clear creative briefs.",
+                        description: "BriefBuilder takes raw client emails, call notes, and feedback and structures them into clear, actionable creative briefs that your team can run with.",
+                        features: [
+                            "Paste client email/notes \u2192 get a structured creative brief",
+                            "Auto-fills: objectives, target audience, deliverables, timeline",
+                            "Flags ambiguous requests and suggests clarifying questions",
+                            "Brief templates customized per client and project type",
+                            "Version history so you can see how briefs evolved"
+                        ],
+                        howItWorks: "Paste in the client's raw communication. BriefBuilder extracts the key information, structures it into your brief template, and flags anything that needs clarification."
+                    };
+                }
+                if (has('comms:responses')) {
+                    return {
+                        name: "ReplyReady",
+                        tagline: "Smart email drafts that know your clients and your style.",
+                        description: "ReplyReady reads incoming client emails and drafts contextual, on-tone responses based on your communication history, project status, and client relationship style.",
+                        features: [
+                            "Context-aware reply drafts based on email thread and project data",
+                            "Learns your writing style and adapts per client",
+                            "Urgency detection: flags emails that need immediate attention",
+                            "Suggested attachments and links based on content",
+                            "Quick-action buttons: approve, edit, or regenerate"
+                        ],
+                        howItWorks: "When a client email arrives, ReplyReady drafts a response considering the full context. Review, adjust if needed, and send."
+                    };
+                }
+                if (has('comms:recaps')) {
+                    return {
+                        name: "RecapBot",
+                        tagline: "Instant call recaps and SOWs from your meeting notes.",
+                        description: "RecapBot transforms your rough call notes into polished client recaps and statements of work, formatted professionally and ready to send.",
+                        features: [
+                            "Raw notes \u2192 structured recap in seconds",
+                            "SOW generation from discussed scope and deliverables",
+                            "Action items extraction with owners and dates",
+                            "Professional formatting matching your agency templates",
+                            "Version tracking for evolving scopes"
+                        ],
+                        howItWorks: "After a client call, paste your rough notes. RecapBot generates a professional recap and, if applicable, a draft SOW. Review, refine, and send."
+                    };
+                }
+                return {
+                    name: "ClientConnect",
+                    tagline: "Your AI communications co-pilot for client management.",
+                    description: "ClientConnect helps you draft responses, prepare meeting materials, and maintain consistent communication across all your client accounts.",
+                    features: [
+                        "Smart email drafting with client context awareness",
+                        "Quick-response templates for common client questions",
+                        "Meeting prep packets generated automatically",
+                        "Follow-up reminders so nothing falls through",
+                        "Client communication history and tone profiling"
+                    ],
+                    howItWorks: "ClientConnect learns each client's communication style and history. When you need to respond, it drafts contextual replies. When you have meetings, it preps your briefs."
+                };
+            }
+
+            // Tracking bots
+            if (has('challenge:tracking')) {
+                if (hasAny('tracking:fragmented', 'tracking:missed')) {
+                    return {
+                        name: "ProjectPulse",
+                        tagline: "One dashboard to rule all your projects \u2014 with early warnings built in.",
+                        description: "ProjectPulse aggregates project data from all your tools into a single, real-time dashboard. It uses pattern recognition to flag at-risk projects before they become emergencies.",
+                        features: [
+                            "Unified project dashboard pulling from all your tools",
+                            "Traffic light system: green/yellow/red status at a glance",
+                            "Early warning alerts when deadlines are at risk",
+                            "Automated weekly status reports per project",
+                            "Resource utilization view across all accounts"
+                        ],
+                        howItWorks: "Connect your PM tools, email, and calendar. ProjectPulse creates a unified dashboard. It monitors progress patterns and alerts you when a project is trending toward delays."
+                    };
+                }
+                return {
+                    name: "DeadlineKeeper",
+                    tagline: "Smart deadline management that adapts when plans change.",
+                    description: "DeadlineKeeper dynamically manages project timelines, automatically adjusting downstream dates when things shift and alerting everyone affected.",
+                    features: [
+                        "Dynamic timeline management with dependency tracking",
+                        "Auto-adjusts downstream deadlines when things shift",
+                        "Stakeholder notifications when dates change",
+                        "Workload balancing suggestions across team",
+                        "Historical accuracy tracking: how well do we estimate?"
+                    ],
+                    howItWorks: "Input your project timelines and dependencies. When a date shifts, DeadlineKeeper cascades the change, notifies affected people, and suggests mitigation strategies."
+                };
+            }
+
+            // Bridging bots
+            if (has('challenge:bridging')) {
+                return {
+                    name: "BridgeBot",
+                    tagline: "Closes the gap between what clients want and what gets created.",
+                    description: "BridgeBot helps translate client requests into clear creative briefs, manages expectations on both sides, and tracks alignment throughout the project lifecycle.",
+                    features: [
+                        "Client request \u2192 structured brief conversion with smart questions",
+                        "Expectation alignment checker: flags scope mismatches early",
+                        "Visual reference matcher: turns vague client descriptions into mood boards",
+                        "Revision tracker showing client satisfaction trend",
+                        "Template library of successful brief structures per project type"
+                    ],
+                    howItWorks: "When a client request comes in, run it through BridgeBot. It structures the request, identifies gaps, suggests clarifying questions, and generates a brief the creative team can actually use."
+                };
+            }
+
+            // Documentation bots
+            if (has('challenge:documentation')) {
+                if (has('docs:reports')) {
+                    return {
+                        name: "ReportGenie",
+                        tagline: "Beautiful client reports generated from your data, not your weekends.",
+                        description: "ReportGenie connects to your analytics and project data to auto-generate polished client performance reports with insights, visualizations, and recommendations.",
+                        features: [
+                            "Connects to analytics platforms (social, web, ads) for real data",
+                            "Auto-generates branded report with charts and insights",
+                            "AI-written performance summaries and recommendations",
+                            "Customizable templates per client and report type",
+                            "Scheduled generation: weekly, monthly, quarterly"
+                        ],
+                        howItWorks: "Connect your data sources and set up client templates. On schedule (or on demand), ReportGenie pulls fresh data, generates visualizations, writes insights, and delivers a polished report."
+                    };
+                }
+                if (has('docs:proposals')) {
+                    return {
+                        name: "PitchCraft",
+                        tagline: "From blank page to compelling proposal in minutes, not days.",
+                        description: "PitchCraft helps you build client proposals and pitch decks faster by generating structured content from your inputs, past proposals, and client research.",
+                        features: [
+                            "Input client details \u2192 get a proposal structure with content drafts",
+                            "Learns from your winning proposals to suggest effective frameworks",
+                            "Auto-research: pulls relevant case studies and market data",
+                            "Deck generation with professional layouts",
+                            "Pricing and scope estimation assistance"
+                        ],
+                        howItWorks: "Enter the client opportunity details. PitchCraft suggests a structure based on similar past wins, drafts key sections, and pulls in relevant case studies."
+                    };
+                }
+                if (has('docs:minutes')) {
+                    return {
+                        name: "MinutesMaster",
+                        tagline: "Meeting minutes and action items, ready before you're back at your desk.",
+                        description: "MinutesMaster turns your rough meeting notes into polished minutes with categorized action items, owner assignments, and deadline tracking.",
+                        features: [
+                            "Rough notes \u2192 structured minutes in seconds",
+                            "Action items auto-extracted with owners and due dates",
+                            "Decision log: tracks what was agreed and by whom",
+                            "Follow-up email draft generation",
+                            "Action item tracking across all meetings"
+                        ],
+                        howItWorks: "After a meeting, paste your notes. MinutesMaster structures them into professional minutes, extracts action items, and drafts follow-up communications."
+                    };
+                }
+                if (has('docs:competitive')) {
+                    return {
+                        name: "CompeteIQ",
+                        tagline: "Competitive intelligence reports that practically write themselves.",
+                        description: "CompeteIQ monitors competitor activity and generates structured competitive analysis decks with insights, comparisons, and strategic recommendations.",
+                        features: [
+                            "Competitor monitoring across social, web, and ads",
+                            "Auto-generated competitive analysis frameworks",
+                            "SWOT analysis generation per competitor",
+                            "Market positioning map visualization",
+                            "Monthly competitive digest for client presentations"
+                        ],
+                        howItWorks: "Set up competitor watchlists per client. CompeteIQ monitors activity and generates competitive analysis decks you can customize and present to clients."
+                    };
+                }
+                return {
+                    name: "DocDraft",
+                    tagline: "First drafts of every document you hate writing, ready in seconds.",
+                    description: "DocDraft generates first drafts of meeting minutes, creative briefs, project scopes, and other agency documents from minimal input.",
+                    features: [
+                        "Meeting notes \u2192 polished minutes with action items",
+                        "Quick-brief mode: answer 5 questions \u2192 get a full creative brief",
+                        "Scope document generator from project outlines",
+                        "Smart templates that learn your agency's style",
+                        "Export to Word, PDF, or your PM tool"
+                    ],
+                    howItWorks: "Choose document type, provide your raw input, and DocDraft generates a polished first draft. Edit, approve, and share."
+                };
+            }
+
+            // Multitasking bots
+            if (has('challenge:multitasking')) {
+                return {
+                    name: "FlowKeeper",
+                    tagline: "Your AI chief of staff that keeps all your plates spinning.",
+                    description: "FlowKeeper helps you manage the chaos of multiple clients by prioritizing your tasks, drafting routine communications, and alerting you to what needs attention now vs. what can wait.",
+                    features: [
+                        "AI-prioritized daily task list across all clients",
+                        "Smart scheduling suggestions based on deadlines and importance",
+                        "Quick-draft mode for routine emails and updates",
+                        "Context cards: instant recap when switching between clients",
+                        "End-of-day summary of what was accomplished and what's pending"
+                    ],
+                    howItWorks: "FlowKeeper connects to your email, calendar, and PM tools. Each morning, it presents your prioritized day. Throughout the day, it drafts routine messages, flags urgencies, and keeps you focused."
+                };
+            }
+
+            // Default CS bot
+            return {
+                name: "AccountAssist",
+                tagline: "AI-powered account management that never drops the ball.",
+                description: "AccountAssist is a comprehensive AI assistant for client servicing teams \u2014 handling communications, tracking, reporting, and coordination so you can focus on the relationship.",
+                features: [
+                    "Client communication drafts and templates",
+                    "Project status tracking and alerting",
+                    "Automated report and document generation",
+                    "Meeting preparation and follow-up automation",
+                    "Cross-client priority management"
+                ],
+                howItWorks: "AccountAssist integrates with your existing tools and learns your workflow. It handles the operational overhead of account management so you can focus on strategy and client relationships."
+            };
+        }
+    }
+
+    // ─── App State ───
+    let state = {
+        screen: 'welcome',
+        team: null,
+        currentQuestion: null,
+        questionNumber: 0,
+        totalQuestions: 10,
+        answers: [],
+        tags: [],
+        customInputs: [],
+        botIdea: null,
+        // History for back navigation
+        history: []
+    };
+
+    function setState(updates) {
+        Object.assign(state, updates);
+        render();
+    }
+
+    // ─── Event Handlers ───
+    function selectTeam(team) {
+        const firstQuestion = team === 'creative' ? 'creative_role' : 'cs_role';
+        setState({
+            screen: 'questionnaire',
+            team: team,
+            currentQuestion: firstQuestion,
+            questionNumber: 1,
+            tags: [team === 'creative' ? 'team:creative' : 'team:cs'],
+            history: [{
+                screen: 'welcome',
+                team: null,
+                currentQuestion: null,
+                questionNumber: 0,
+                answers: [],
+                tags: [],
+                customInputs: []
+            }]
+        });
+    }
+
+    function selectOption(option) {
+        // Save current state to history
+        const historyEntry = {
+            screen: state.screen,
+            team: state.team,
+            currentQuestion: state.currentQuestion,
+            questionNumber: state.questionNumber,
+            answers: [...state.answers],
+            tags: [...state.tags],
+            customInputs: [...state.customInputs]
+        };
+
+        const newTags = [...state.tags, ...option.tags];
+        const newAnswers = [...state.answers, {
+            question: QUESTIONS[state.currentQuestion].text,
+            answer: option.label,
+            questionKey: state.currentQuestion
+        }];
+
+        if (option.next === null) {
+            setState({
+                answers: newAnswers,
+                tags: newTags,
+                screen: 'thinking',
+                history: [...state.history, historyEntry]
+            });
+            setTimeout(() => {
+                const idea = generateBotIdea(state.team, newTags, state.customInputs);
+                setState({
+                    botIdea: idea,
+                    screen: 'result'
+                });
+            }, 2000);
+        } else {
+            setState({
+                currentQuestion: option.next,
+                questionNumber: state.questionNumber + 1,
+                answers: newAnswers,
+                tags: newTags,
+                history: [...state.history, historyEntry]
+            });
+        }
+    }
+
+    function submitCustomInput() {
+        const input = document.getElementById('custom-input');
+        const value = input ? input.value.trim() : '';
+        if (!value) return;
+
+        const historyEntry = {
+            screen: state.screen,
+            team: state.team,
+            currentQuestion: state.currentQuestion,
+            questionNumber: state.questionNumber,
+            answers: [...state.answers],
+            tags: [...state.tags],
+            customInputs: [...state.customInputs]
+        };
+
+        const q = QUESTIONS[state.currentQuestion];
+        const newAnswers = [...state.answers, {
+            question: q.text,
+            answer: value,
+            questionKey: state.currentQuestion,
+            isCustom: true
+        }];
+        const newCustomInputs = [...state.customInputs, {
+            question: q.text,
+            answer: value
+        }];
+
+        // For custom input, follow the first option's next path
+        const defaultNext = q.options[0].next;
+        const defaultTags = ['custom:input'];
+
+        if (defaultNext === null) {
+            setState({
+                answers: newAnswers,
+                tags: [...state.tags, ...defaultTags],
+                customInputs: newCustomInputs,
+                screen: 'thinking',
+                history: [...state.history, historyEntry]
+            });
+            setTimeout(() => {
+                const idea = generateBotIdea(state.team, state.tags, state.customInputs);
+                setState({
+                    botIdea: idea,
+                    screen: 'result'
+                });
+            }, 2000);
+        } else {
+            setState({
+                currentQuestion: defaultNext,
+                questionNumber: state.questionNumber + 1,
+                answers: newAnswers,
+                tags: [...state.tags, ...defaultTags],
+                customInputs: newCustomInputs,
+                history: [...state.history, historyEntry]
+            });
+        }
+    }
+
+    function goBack() {
+        if (state.history.length === 0) return;
+        const prev = state.history[state.history.length - 1];
+        const newHistory = state.history.slice(0, -1);
+        setState({
+            ...prev,
+            history: newHistory,
+            botIdea: null
+        });
+    }
+
+    function startOver() {
+        setState({
+            screen: 'welcome',
+            team: null,
+            currentQuestion: null,
+            questionNumber: 0,
+            answers: [],
+            tags: [],
+            customInputs: [],
+            botIdea: null,
+            history: []
+        });
+    }
+
+    function copyResult() {
+        const bot = state.botIdea;
+        let text = `BOT IDEA: ${bot.name}\n\n` +
+            `"${bot.tagline}"\n\n` +
+            `DESCRIPTION:\n${bot.description}\n\n` +
+            `KEY FEATURES:\n${bot.features.map(f => '  ' + f).join('\n')}\n\n` +
+            `HOW IT WORKS:\n${bot.howItWorks}\n\n` +
+            `---\nQuestionnaire Answers:\n${state.answers.map((a, i) => `${i+1}. ${a.question}\n   > ${a.answer}${a.isCustom ? ' (custom input)' : ''}`).join('\n')}`;
+
+        if (state.customInputs.length > 0) {
+            text += `\n\n---\nAdditional Notes from User:\n${state.customInputs.map(c => `- ${c.question}: "${c.answer}"`).join('\n')}`;
+        }
+
+        navigator.clipboard.writeText(text).then(() => {
+            const toast = document.getElementById('toast');
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        });
+    }
+
+    function handleCustomKeydown(e) {
+        if (e.key === 'Enter') submitCustomInput();
+    }
+
+    // ─── Render ───
+    function render() {
+        const app = document.getElementById('app');
+
+        let html = `
+            <div class="header">
+                <div class="logo">
+                    <div class="logo-icon">\u26A1</div>
+                    <div class="logo-text">Spine <span>Bots</span></div>
+                </div>
+                <p>Discover the perfect AI bot idea for your workflow. Answer a few smart questions, and we'll suggest a bot tailored to your needs.</p>
+            </div>
+        `;
+
+        if (state.screen === 'welcome') {
+            html += `
+                <div class="welcome">
+                    <h1>What team are <span>you</span> on?</h1>
+                    <p>We'll tailor the questions to your daily work and challenges.</p>
+                    <div class="team-select">
+                        <div class="team-card" onclick="selectTeam('creative')">
+                            <div class="team-icon">\uD83C\uDFA8</div>
+                            <h3>Creative Team</h3>
+                            <p>Designers, copywriters, art directors, and content creators</p>
+                        </div>
+                        <div class="team-card" onclick="selectTeam('cs')">
+                            <div class="team-icon">\uD83E\uDD1D</div>
+                            <h3>Client Servicing</h3>
+                            <p>Account managers, project managers, and strategists</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (state.screen === 'questionnaire') {
+            const q = QUESTIONS[state.currentQuestion];
+            const progress = (state.questionNumber / state.totalQuestions) * 100;
+            const letters = 'ABCDEFGH';
+
+            // Back button
+            if (state.history.length > 0) {
+                html += `<button class="back-btn" onclick="goBack()">\u2190 Back</button>`;
+            }
+
+            // Answer trail
+            if (state.answers.length > 0) {
+                html += `<div class="answer-trail">`;
+                state.answers.forEach(a => {
+                    html += `<div class="trail-chip"><span class="trail-label">\u2713</span> ${a.answer.length > 30 ? a.answer.substring(0, 30) + '...' : a.answer}</div>`;
+                });
+                html += `</div>`;
+            }
+
+            // Progress bar
+            html += `
+                <div class="progress-container">
+                    <div class="progress-info">
+                        <span class="progress-label">Your bot is taking shape...</span>
+                        <span class="progress-count">Question ${state.questionNumber}</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${Math.min(progress, 100)}%"></div>
+                    </div>
+                </div>
+            `;
+
+            // Question card
+            html += `
+                <div class="question-card">
+                    <div class="question-number">Question ${state.questionNumber}</div>
+                    <div class="question-text">${q.text}</div>
+                    ${q.subtitle ? `<div class="question-subtitle">${q.subtitle}</div>` : '<div style="margin-bottom:28px"></div>'}
+                    <div class="options">
+                        ${q.options.map((opt, i) => `
+                            <button class="option" onclick='selectOption(${JSON.stringify(opt).replace(/'/g, "&#39;")})'>
+                                <div class="option-letter">${letters[i]}</div>
+                                <span>${opt.label}</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                    <div class="custom-input-wrapper">
+                        <label class="custom-input-label">${q.customPlaceholder ? 'Or share your own answer:' : 'Or type your own answer:'}</label>
+                        <div class="custom-input-row">
+                            <input type="text" id="custom-input" class="custom-input"
+                                placeholder="${q.customPlaceholder || 'Type your own answer...'}"
+                                onkeydown="handleCustomKeydown(event)" />
+                            <button class="custom-submit" onclick="submitCustomInput()">Submit</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (state.screen === 'thinking') {
+            html += `
+                <div class="thinking">
+                    <div class="thinking-dots">
+                        <div class="thinking-dot"></div>
+                        <div class="thinking-dot"></div>
+                        <div class="thinking-dot"></div>
+                    </div>
+                    <p>Analyzing your answers and crafting the perfect bot idea...</p>
+                </div>
+            `;
+        }
+
+        if (state.screen === 'result') {
+            const bot = state.botIdea;
+
+            // Back button on result
+            html += `<button class="back-btn" onclick="goBack()">\u2190 Back</button>`;
+
+            // Show custom inputs section if any
+            let customSection = '';
+            if (state.customInputs.length > 0) {
+                customSection = `
+                    <div class="user-notes-section">
+                        <div class="summary-section-title">Your Custom Notes</div>
+                        ${state.customInputs.map(c => `
+                            <div class="user-note-item"><strong>${c.question}</strong><br>"${c.answer}"</div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            html += `
+                <div class="summary-card">
+                    <div class="summary-badge">\u2728 Your Bot Idea</div>
+                    <div class="bot-name">${bot.name}</div>
+                    <div class="bot-tagline">${bot.tagline}</div>
+
+                    <div class="summary-section">
+                        <div class="summary-section-title">What It Does</div>
+                        <p>${bot.description}</p>
+                    </div>
+
+                    <div class="summary-section">
+                        <div class="summary-section-title">Key Features</div>
+                        <ul>
+                            ${bot.features.map(f => `<li>${f}</li>`).join('')}
+                        </ul>
+                    </div>
+
+                    <div class="summary-section">
+                        <div class="summary-section-title">How It Works</div>
+                        <p>${bot.howItWorks}</p>
+                    </div>
+
+                    ${customSection}
+
+                    <div class="summary-section">
+                        <div class="summary-section-title">Your Journey</div>
+                        <ul>
+                            ${state.answers.map(a => `<li><strong>${a.question}</strong><br>${a.answer}${a.isCustom ? ' <em>(custom)</em>' : ''}</li>`).join('')}
+                        </ul>
+                    </div>
+
+                    <div class="actions">
+                        <button class="btn btn-primary" onclick="copyResult()">\uD83D\uDCCB Copy Bot Idea</button>
+                        <button class="btn btn-secondary" onclick="startOver()">\u21BA Start Over</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        app.innerHTML = html;
+
+        // Focus custom input if on questionnaire
+        if (state.screen === 'questionnaire') {
+            const input = document.getElementById('custom-input');
+            // Don't auto-focus to avoid scroll jump on mobile
+        }
+    }
+
+    render();
+    </script>
+</body>
+</html>
